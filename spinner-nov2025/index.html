@@ -684,6 +684,20 @@
 
 
     <script>
+        // // --- CONFIG (The only shit you need to change) ---
+        // const CONFIG = {
+        //     SHEET_ID: '1_Eb5Vu48WsYYB9KxhhRM7BGf_d2blgmBDDM6TNby-RA',
+        //     TAB_ID: '0',
+        //     // --- Time Gate ---
+        //     ALLOWED_DAYS: [1, 2, 3, 4, 5, 6], // Mon-Fri
+        //     START_HOUR: 8,  // 8:00 AM
+        //     END_HOUR: 17, // 5:00 PM
+        //     // --- Links ---
+        //     WIN_SUBMIT_URL: 'https://www.raffles-indonesia.com/enquiryform',
+        //     // --- Spin Physics ---
+        //     SPIN_DURATION_S: 3, // 6 seconds
+        //     MIN_SPINS: 10 
+        // };
         // --- CONFIG (The only shit you need to change) ---
         const CONFIG = {
             SHEET_ID: '1_Eb5Vu48WsYYB9KxhhRM7BGf_d2blgmBDDM6TNby-RA',
@@ -695,9 +709,13 @@
             // --- Links ---
             WIN_SUBMIT_URL: 'https://www.raffles-indonesia.com/enquiryform',
             // --- Spin Physics ---
-            SPIN_DURATION_S: 6, // 6 seconds
-            MIN_SPINS: 5 
+            SPIN_DURATION_S: 3, // 6 seconds
+            MIN_SPINS: 10,
+            
+            // --- THE CLIENT'S HACK ---
+            WIN_PROBABILITY: 2 / 6
         };
+        // --- END CONFIG ---
         // --- END CONFIG ---
 
         // --- Global State & Elements ---
@@ -896,6 +914,43 @@
             DOM.centerButton.querySelector('span').textContent = 'STOP';
         }
 
+        // function stopSpin() {
+        //     if (!STATE.isSpinning) return;
+
+        //     STATE.isSpinning = false;
+            
+        //     DOM.centerButton.classList.add('pressed');
+        //     setTimeout(() => DOM.centerButton.classList.remove('pressed'), 100);
+            
+        //     const computedStyle = window.getComputedStyle(DOM.wheel);
+        //     const matrix = new DOMMatrix(computedStyle.transform);
+        //     const currentRotation = Math.atan2(matrix.b, matrix.a) * (30 / Math.PI);
+            
+        //     const totalSegments = STATE.availableGifts.length;
+        //     const resultIndex = Math.floor(Math.random() * totalSegments);
+        //     const thePrize = STATE.availableGifts[resultIndex];
+            
+        //     const segmentAngle = 360 / totalSegments;
+        //     const targetAngle = (resultIndex * segmentAngle) + (segmentAngle / 2);
+            
+        //     const targetStopRotation = 360 - targetAngle + 270;
+            
+        //     const currentMod = (currentRotation % 360 + 360) % 360;
+        //     const spinAmount = (360 * CONFIG.MIN_SPINS) + targetStopRotation - currentMod;
+        //     const finalRotation = currentRotation + spinAmount;
+
+        //     DOM.wheel.classList.remove('spinning');
+        //     DOM.wheel.style.transition = `transform ${CONFIG.SPIN_DURATION_S}s ${getComputedStyle(document.documentElement).getPropertyValue('--spin-timing-function')}`;
+        //     DOM.wheel.style.transform = `rotate(${finalRotation}deg)`;
+
+        //     STATE.currentRotation = finalRotation;
+            
+        //     // This is the SYNCED timer.
+
+        //     setTimeout(() => {
+        //         showPopup('result', thePrize);
+        //     }, 1000); 
+        // }
         function stopSpin() {
             if (!STATE.isSpinning) return;
 
@@ -908,10 +963,41 @@
             const matrix = new DOMMatrix(computedStyle.transform);
             const currentRotation = Math.atan2(matrix.b, matrix.a) * (30 / Math.PI);
             
-            const totalSegments = STATE.availableGifts.length;
-            const resultIndex = Math.floor(Math.random() * totalSegments);
-            const thePrize = STATE.availableGifts[resultIndex];
+            // --- THIS IS THE NEW HACK, MATE ---
+
+            // 1. Roll the dice. Is this a winning spin? (e.g., 16.6% chance)
+            const isGonnaBeAWin = Math.random() < CONFIG.WIN_PROBABILITY;
+
+            // 2. Sort all your prizes into two piles: 'rad' and 'bogus'
+            const winPrizes = STATE.availableGifts.filter(p => p.isWin);
+            const losePrizes = STATE.availableGifts.filter(p => p.isWin === false);
+
+            // 3. Decide which pile we're picking from
+            let potentialPrizes = [];
             
+            if (isGonnaBeAWin && winPrizes.length > 0) {
+                // Stoked! It's a win. Pick from the 'rad' pile.
+                potentialPrizes = winPrizes;
+            } else if (!isGonnaBeAWin && losePrizes.length > 0) {
+                // D'oh! It's a loss. Pick from the 'bogus' pile.
+                potentialPrizes = losePrizes;
+            } else {
+                // Fallback: If the sheet is cooked (e.g., all wins, no losses)
+                // just pick from whatever is left. Can't crash, brah.
+                potentialPrizes = STATE.availableGifts;
+            }
+            
+            // 4. Pick a random prize from the chosen pile
+            const randomPrizeIndex = Math.floor(Math.random() * potentialPrizes.length);
+            const thePrize = potentialPrizes[randomPrizeIndex];
+
+            // 5. Now find that prize's *original* spot on the wheel
+            // This is the magic so it lands on the right slice!
+            const totalSegments = STATE.availableGifts.length;
+            const resultIndex = STATE.availableGifts.indexOf(thePrize);
+            
+            // --- END OF THE HACK ---
+
             const segmentAngle = 360 / totalSegments;
             const targetAngle = (resultIndex * segmentAngle) + (segmentAngle / 2);
             
@@ -928,7 +1014,6 @@
             STATE.currentRotation = finalRotation;
             
             // This is the SYNCED timer.
-
             setTimeout(() => {
                 showPopup('result', thePrize);
             }, 1000); 
