@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Raffles Jakarta - Spin the Wheel!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* --- Color Scheme --- */
+            --color-yellow: #FFD900;
+            --color-black: #000000;
+            --color-white: #FFFFFF;
+            --color-grey: #f0f0f0;
+            --color-shadow: rgba(0, 0, 0, 0.1);
+            --color-overlay: rgba(0, 0, 0, 0.85);
+
+            /* --- Typography --- */
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            
+            /* --- Game Sizing --- */
+            --spin-duration: 6s;
+            --spin-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* --- Basic Reset --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* No scrollbars, mate */
+            background-color: var(--color-grey);
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--color-black);
+            font-size: 16px;
+        }
+
+        /* * --- THE FIRST HACK (FIXES POPUP) --- 
+         * This is the class my JS was missing.
+         */
+        .hidden {
+            display: none !important;
+        }
+
+        /* --- The Main Game Container --- */
+        #game-container {
+            width: 100%;
+            max-width: 500px; /* Good for mobile */
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        /* --- Header & Logo --- */
+        #game-header {
+            width: 100%;
+            padding: 1rem;
+        }
+
+        #game-logo {
+            width: 100%;
+            max-width: 300px;
+            height: auto;
+        }
+
+        /* --- The Wheel Zone --- */
+        #wheel-zone {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Make it a square based on width */
+            width: 90vw;
+            height: 90vw;
+            max-width: 450px;
+            max-height: 450px;
+            flex-shrink: 0;
+        }
+
+        /* This is the magic stick that points to your prize */
+        #wheel-pointer {
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 30px solid var(--color-black); /* Pointer color */
+            position: absolute;
+            top: -15px; /* Sits just on top of the wheel */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            filter: drop-shadow(0 2px 2px var(--color-shadow));
+        }
+
+        /* The main event - the wheel itself */
+        #wheel {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform var(--spin-duration) var(--spin-timing-function);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        #wheel.spinning {
+            transition: none;
+            animation: spin 0.5s linear infinite;
+        }
+        
+        .wheel-layer {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        
+        #wheel-color-layer {
+            background-color: var(--color-grey);
+            border: 8px solid var(--color-white);
+            box-shadow: 0 0 20px var(--color-shadow), inset 0 0 15px var(--color-shadow);
+            transform: rotate(30deg);
+        }
+
+        #wheel-label-layer {
+            z-index: 2;
+        }
+
+        /* This container is just a "stick" rotated by JS */
+        .wheel-label-container {
+            position: absolute;
+            width: 50%; /* Stick "length" (as a radius) */
+            height: 1px; /* It's just a line, mate */
+            top: 50%;
+            left: 50%;
+            transform-origin: 0% 0%; /* Pivot from the wheel center */
+        }
+        
+        .wheel-label {
+            display: block;
+            /* JS will set the full transform from here */
+            left: -21px;
+            /* Text styling */
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--color-black);
+            
+            /* Handle long text */
+            width: 120px;
+            max-width: 120px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            top: -8px;
+            position: relative;
+        }
+
+        /* The center button */
+        #wheel-center-button {
+            width: 80px;
+            height: 80px;
+            background: var(--color-white);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 5px solid var(--color-white);
+            box-shadow: 0 0 10px var(--color-shadow), inset 0 0 10px var(--color-shadow);
+            
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--color-black);
+            text-transform: uppercase;
+            
+            transition: transform 0.1s ease-out;
+        }
+
+        #wheel-center-button.pressed {
+            transform: translate(-50%, -50%) scale(0.9);
+        }
+
+        /* --- Popups & Overlays --- */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--color-overlay);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        
+        .popup {
+            background: var(--color-white);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px var(--color-shadow);
+
+            transform: scale(0.7);
+            opacity: 0;
+            animation: popup-enter 0.3s cubic-bezier(0.2, 0.8, 0.2, 1.2) forwards;
+        }
+
+        @keyframes popup-enter {
+            from {
+                transform: scale(0.7);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .popup h2 {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--color-black);
+            margin-bottom: 1rem;
+        }
+
+        .popup p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .popup-button {
+            display: inline-block;
+            width: 100%;
+            padding: 1rem;
+            border-radius: 8px;
+            background: var(--color-yellow);
+            color: var(--color-black);
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .popup-button:hover {
+            background: #e6c300;
+        }
+        
+        #win-info {
+            border-top: 1px solid var(--color-grey);
+            padding-top: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        #win-info p {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+        
+        #time-gate-overlay {
+            flex-direction: column;
+        }
+/* CONFETTIIIIIII */
+
+.confetti-container {
+  user-select: none;
+  z-index: 0;
+}
+.confetti {
+  position: fixed;
+  top: 0;
+  right: 0;
+  display: none;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.confetti .square {
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--bg);
+  transform: rotate(-140deg);
+}
+
+.confetti .rectangle {
+  width: 1rem;
+  height: 0.5rem;
+  background-color: var(--bg);
+}
+
+.confetti .hexagram {
+  width: 0;
+  height: 0;
+  border-left: 0.5rem solid transparent;
+  border-right: 0.5rem solid transparent;
+  border-bottom: 1rem solid var(--bg);
+  position: relative;
+}
+
+.confetti .hexagram:after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 0.5rem solid transparent;
+  border-right: 0.5rem solid transparent;
+  border-top: 1rem solid var(--bg);
+  position: absolute;
+  top: 0.33rem;
+  left: -0.5rem;
+}
+
+.confetti .pentagram {
+  width: 0rem;
+  height: 0rem;
+  display: block;
+  margin: 0.5rem 0;
+  border-right: 1rem solid transparent;
+  border-bottom: 0.7rem solid var(--bg);
+  border-left: 1rem solid transparent;
+  transform: rotate(35deg);
+  position: relative;
+}
+.confetti .pentagram:before {
+  content: "";
+  width: 0;
+  height: 0;
+  display: block;
+  border-bottom: 0.8rem solid var(--bg);
+  border-left: 0.3rem solid transparent;
+  border-right: 0.3rem solid transparent;
+  transform: rotate(-35deg);
+  position: absolute;
+  top: -0.45rem;
+  left: -0.65rem;
+}
+.confetti .pentagram:after {
+  content: "";
+  width: 0rem;
+  height: 0rem;
+  display: block;
+  border-right: 1rem solid transparent;
+  border-bottom: 0.7rem solid var(--bg);
+  border-left: 1rem solid transparent;
+  transform: rotate(-70deg);
+  position: absolute;
+  top: 0.03rem;
+  left: -1.05rem;
+}
+
+.confetti .dodecagram {
+  background: var(--bg);
+  width: 0.8rem;
+  height: 0.8rem;
+  position: relative;
+}
+
+.confetti .dodecagram:before {
+  content: "";
+  height: 0.8rem;
+  width: 0.8rem;
+  background: var(--bg);
+  transform: rotate(30deg);
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.confetti .dodecagram:after {
+  content: "";
+  height: 0.8rem;
+  width: 0.8rem;
+  background: var(--bg);
+  transform: rotate(60deg);
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.confetti .wavy-line {
+  position: relative;
+}
+.confetti .wavy-line::after,
+.confetti .wavy-line::before {
+  content: "";
+  height: 1rem;
+  width: 8rem;
+  background-size: 2rem 1rem;
+  position: absolute;
+  left: -9rem;
+  transform: rotate(90deg);
+}
+
+.confetti .wavy-line::before {
+  background-image: linear-gradient(
+    45deg,
+    transparent,
+    transparent 50%,
+    var(--bg) 50%,
+    transparent 60%
+  );
+  top: 1rem;
+}
+.confetti .wavy-line::after {
+  background-image: linear-gradient(
+    -45deg,
+    transparent,
+    transparent 50%,
+    var(--bg) 50%,
+    transparent 60%
+  );
+}
+
+.confetti i {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 0.2rem;
+  animation-name: confetti;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-duration: calc(70s / var(--speed));
+}
+
+.confetti i:nth-child(even) {
+  transform: rotate(90deg);
+}
+
+@keyframes confetti {
+  0% {
+    transform: translateY(-100vh);
+  }
+
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+#marking {
+    width:80vw;
+    height: 50px;
+    bottom: 0;
+    left: 10vw;
+    position: fixed;
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.4em;
+}
+    </style>
+
+</head>
+<body>
+
+    <div id="time-gate-overlay" class="popup-overlay hidden">
+        <div class="popup">
+            <img src="logo.png" alt="Raffles Jakarta" style="max-width: 200px; margin-bottom: 1.5rem;">
+            <h2 id="time-gate-title">Arcade's Closed, Brah!</h2>
+            <p id="time-gate-message">
+                This gnarly game is only open from Monday to Friday, 8:00 AM to 5:00 PM.
+                <br><br>
+                Come back later!
+            </p>
+        </div>
+    </div>
+
+    <div id="game-container">
+        
+        <header id="game-header">
+            <img src="logo.png" alt="Raffles Jakarta Design Institute" id="game-logo">
+        </header>
+
+        <main id="wheel-zone">
+            <div id="wheel-pointer"></div>
+            <div id="wheel">
+                <div id="wheel-color-layer" class="wheel-layer"></div>
+                <div id="wheel-label-layer" class="wheel-layer"></div>
+            </div>
+            <div id="wheel-center-button">
+                <span>SPIN</span>
+            </div>
+        </main>
+
+        <footer style="height: 50px;"></footer>
+
+    </div>
+
+    <div id="popup-overlay" class="popup-overlay hidden">
+    <div class="confetti-container">
+      <div class="confetti">
+        <i style="--speed: 10; --bg: yellow" class="square"></i>
+        <i style="--speed: 18; --bg: white" class="pentagram"></i>
+        <i style="--speed: 29; --bg: green" class="rectangle"></i>
+        <i style="--speed: 17; --bg: blue" class="hexagram"></i>
+        <i style="--speed: 33; --bg: red" class="pentagram"></i>
+        <i style="--speed: 26; --bg: yellow" class="dodecagram"></i>
+        <i style="--speed: 24; --bg: pink" class="wavy-line"> </i>
+        <i style="--speed: 5; --bg: blue" class="wavy-line"></i>
+        <i style="--speed: 40; --bg: white" class="square"></i>
+        <i style="--speed: 17; --bg: green" class="rectangle"></i>
+        <i style="--speed: 25; --bg: white" class="square"></i>
+        <i style="--speed: 18; --bg: green" class="rectangle"></i>
+        <i style="--speed: 15; --bg: yellow" class="wavy-line"> </i>
+        <i style="--speed: 32; --bg: yellow" class="pentagram"></i>
+        <i style="--speed: 25; --bg: white" class="square"></i>
+        <i style="--speed: 18; --bg: green" class="rectangle"></i>
+        <i style="--speed: 37; --bg: yellow" class="dodecagram"></i>
+        <i style="--speed: 23; --bg: pink" class="wavy-line"></i>
+        <i style="--speed: 37; --bg: red" class="dodecagram"></i>
+        <i style="--speed: 37; --bg: pink" class="wavy-line"></i>
+        <i style="--speed: 36; --bg: white" class="hexagram"></i>
+        <i style="--speed: 32; --bg: green" class="wavy-line"></i>
+        <i style="--speed: 32; --bg: yellow" class="pentagram"></i>
+        <i style="--speed: 29; --bg: white" class="square"></i>
+        <i style="--speed: 18; --bg: green" class="rectangle"></i>
+        <i style="--speed: 37; --bg: red" class="dodecagram"></i>
+        <i style="--speed: 23; --bg: pink" class="wavy-line"> </i>
+        <i style="--speed: 30; --bg: pink" class="rectangle"></i>
+        <i style="--speed: 30; --bg: red" class="square"></i>
+        <i style="--speed: 18; --bg: red" class="pentagram"></i>
+        <i style="--speed: 19; --bg: green" class="rectangle"></i>
+        <i style="--speed: 16; --bg: blue" class="hexagram"></i>
+        <i style="--speed: 23; --bg: red" class="pentagram"></i>
+        <i style="--speed: 34; --bg: yellow" class="dodecagram"></i>
+        <i style="--speed: 39; --bg: pink" class="wavy-line"></i>
+        <i style="--speed: 40; --bg: purple" class="square"></i>
+        <i style="--speed: 21; --bg: green" class="rectangle"></i>
+        <i style="--speed: 14; --bg: white" class="square"></i>
+        <i style="--speed: 38; --bg: green" class="rectangle"></i>
+        <i style="--speed: 19; --bg: red" class="dodecagram"></i>
+        <i style="--speed: 29; --bg: pink" class="wavy-line"> </i>
+        <i style="--speed: 21; --bg: white" class="hexagram"></i>
+        <i style="--speed: 17; --bg: purple" class="wavy-line"></i>
+        <i style="--speed: 32; --bg: yellow" class="pentagram"></i>
+        <i style="--speed: 23; --bg: white" class="square"></i>
+        <i style="--speed: 18; --bg: green" class="rectangle"></i>
+        <i style="--speed: 37; --bg: red" class="dodecagram"></i>
+        <i style="--speed: 48; --bg: pink" class="wavy-line"> </i>
+        <i style="--speed: 38; --bg: pink" class="rectangle"></i>
+        <i style="--speed: 13; --bg: red" class="pentagram"></i>
+        <i style="--speed: 49; --bg: yellow" class="dodecagram"></i>
+        <i style="--speed: 19; --bg: cyan" class="wavy-line"></i>
+        <i style="--speed: 15; --bg: steelblue" class="square"></i>
+        <i style="--speed: 10; --bg: yellow" class="square"></i>
+        <i style="--speed: 18; --bg: white" class="pentagram"></i>
+        <i style="--speed: 29; --bg: green" class="rectangle"></i>
+        <i style="--speed: 17; --bg: blue" class="hexagram"></i>
+        <i style="--speed: 33; --bg: red" class="pentagram"></i>
+        <i style="--speed: 26; --bg: yellow" class="dodecagram"></i>
+        <i style="--speed: 24; --bg: pink" class="wavy-line"> </i>
+        <i style="--speed: 5; --bg: white" class="wavy-line"></i>
+        <i style="--speed: 40; --bg: purple" class="square"></i>
+        <i style="--speed: 17; --bg: green" class="rectangle"></i>
+        <i style="--speed: 25; --bg: white" class="square"></i>
+        <i style="--speed: 18; --bg: green" class="rectangle"></i>
+        <i style="--speed: 15; --bg: cyan" class="wavy-line"> </i>
+        <i style="--speed: 32; --bg: yellow" class="pentagram"></i>
+        <i style="--speed: 45; --bg: white" class="square"></i>
+        <i style="--speed: 18; --bg: green" class="rectangle"></i>
+        <i style="--speed: 37; --bg: red" class="dodecagram"></i>
+        <i style="--speed: 23; --bg: pink" class="wavy-line"> </i>
+        <i style="--speed: 37; --bg: red" class="dodecagram"></i>
+        <i style="--speed: 37; --bg: pink" class="wavy-line"> </i>
+        <i style="--speed: 26; --bg: white" class="hexagram"></i>
+        <i style="--speed: 32; --bg: cyan" class="wavy-line"></i>
+        <i style="--speed: 32; --bg: yellow" class="pentagram"></i>
+        <i style="--speed: 45; --bg: white" class="square"></i>
+        <i style="--speed: 18; --bg: green" class="rectangle"></i>
+        <i style="--speed: 37; --bg: red" class="dodecagram"></i>
+        <i style="--speed: 23; --bg: pink" class="wavy-line"> </i>
+        <i style="--speed: 50; --bg: pink" class="rectangle"></i>
+        <i style="--speed: 30; --bg: red" class="square"></i>
+        <i style="--speed: 18; --bg: red" class="pentagram"></i>
+        <i style="--speed: 19; --bg: green" class="rectangle"></i>
+        <i style="--speed: 16; --bg: blue" class="hexagram"></i>
+        <i style="--speed: 23; --bg: red" class="pentagram"></i>
+        <i style="--speed: 33; --bg: yellow" class="dodecagram"></i>
+        <i style="--speed: 39; --bg: white" class="wavy-line"></i>
+        <i style="--speed: 40; --bg: orange" class="square"></i>
+        <i style="--speed: 21; --bg: green" class="rectangle"></i>
+        <i style="--speed: 14; --bg: white" class="square"></i>
+        <i style="--speed: 38; --bg: green" class="rectangle"></i>
+        <i style="--speed: 19; --bg: red" class="dodecagram"></i>
+        <i style="--speed: 29; --bg: pink" class="wavy-line"> </i>
+        <i style="--speed: 34; --bg: white" class="hexagram"></i>
+        <i style="--speed: 17; --bg: indigo" class="wavy-line"></i>
+        <i style="--speed: 32; --bg: yellow" class="pentagram"></i>
+        <i style="--speed: 23; --bg: white" class="square"></i>
+        <i style="--speed: 18; --bg: green" class="rectangle"></i>
+        <i style="--speed: 37; --bg: red" class="dodecagram"></i>
+        <i style="--speed: 48; --bg: pink" class="wavy-line"> </i>
+        <i style="--speed: 38; --bg: pink" class="rectangle"></i>
+        <i style="--speed: 13; --bg: red" class="pentagram"></i>
+        <i style="--speed: 49; --bg: yellow" class="dodecagram"></i>
+        <i style="--speed: 19; --bg: purple" class="wavy-line"></i>
+        <i style="--speed: 15; --bg: cyan" class="square"></i>
+      </div>
+    </div>
+        <div class="popup">
+            <h2 id="popup-title"></h2>
+            <p id="popup-message"></p>
+
+            <div id="win-info" class="hidden">
+                <p>
+                    <strong>Take a screenshot of this page</strong> and upload it at the link below to claim your prize!
+                </p>
+                <a href="#" id="win-submit-button" class="popup-button" rel="noopener noreferrer">
+                    CLAIM
+                </a>
+            </div>
+
+            <button id="popup-close-btn" class="popup-button"></button>
+        </div>
+    </div>
+
+    
+
+
+    <script>
+        // --- CONFIG (The only shit you need to change) ---
+        const CONFIG = {
+            SHEET_ID: '1_Eb5Vu48WsYYB9KxhhRM7BGf_d2blgmBDDM6TNby-RA',
+            TAB_ID: '0',
+            // --- Time Gate ---
+            ALLOWED_DAYS: [1, 2, 3, 4, 5, 6], // Mon-Fri
+            START_HOUR: 8,  // 8:00 AM
+            END_HOUR: 17, // 5:00 PM
+            // --- Links ---
+            WIN_SUBMIT_URL: 'https://www.raffles-indonesia.com/enquiryform',
+            // --- Spin Physics ---
+            SPIN_DURATION_S: 6, // 6 seconds
+            MIN_SPINS: 5 
+        };
+        // --- END CONFIG ---
+
+        // --- Global State & Elements ---
+        const STATE = {
+            isSpinning: false,
+            canSpin: true,
+            currentRotation: 0,
+            availableGifts: []
+        };
+
+        const DOM = {
+            gameContainer: document.getElementById('game-container'),
+            wheel: document.getElementById('wheel'),
+            wheelColorLayer: document.getElementById('wheel-color-layer'),
+            wheelLabelLayer: document.getElementById('wheel-label-layer'),
+            centerButton: document.getElementById('wheel-center-button'),
+            
+            timeGateOverlay: document.getElementById('time-gate-overlay'),
+
+            popupOverlay: document.getElementById('popup-overlay'),
+            popupTitle: document.getElementById('popup-title'),
+            popupMessage: document.getElementById('popup-message'),
+            popupCloseBtn: document.getElementById('popup-close-btn'),
+            winInfo: document.getElementById('win-info'),
+            winSubmitBtn: document.getElementById('win-submit-button')
+        };
+        
+        // --- Google Sheet Data Fetching ---
+        const dataUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&gid=${CONFIG.TAB_ID}`;
+
+        function cleanGoogleJsonResponse(text) {
+            const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\((.*)\)/s);
+            if (!jsonMatch || !jsonMatch[1]) {
+                throw new Error("D'oh! Couldn't parse the Google JSONP response.");
+            }
+            return JSON.parse(jsonMatch[1]);
+        }
+
+        function formatThatGvizShit(gvizData) {
+            const dataTable = gvizData.table;
+            const prizes = dataTable.rows.map(row => {
+                const label = row.c[0]?.v || null; 
+                const message = row.c[1]?.v || null; 
+                const isWin = row.c[2]?.v || false;
+                
+                if (!label) return null;
+                return { label, message, isWin };
+            });
+            return prizes.filter(prize => prize !== null);
+        }
+
+        // --- Game Logic ---
+
+        function checkTimeGate() {
+            const now = new Date();
+            const currentDay = now.getDay();
+            const currentHour = now.getHours();
+
+            const isDayAllowed = CONFIG.ALLOWED_DAYS.includes(currentDay);
+            const isHourAllowed = currentHour >= CONFIG.START_HOUR && currentHour < CONFIG.END_HOUR;
+
+            // --- HACK FOR TESTING ---
+            // return true; // Uncomment this line to test anytime
+            // --- END HACK ---
+
+            if (isDayAllowed && isHourAllowed) {
+                console.log('Arcade is OPEN, brah! Rock on.');
+                return true;
+            } else {
+                console.log('Arcade is CLOSED. Bogus.');
+                DOM.gameContainer.classList.add('hidden');
+                DOM.timeGateOverlay.classList.remove('hidden');
+                return false;
+            }
+        }
+
+        /**
+         * Builds the wheel with the fixed-up text logic
+         */
+        function buildWheel(gifts) {
+            const totalSegments = gifts.length;
+            const segmentAngle = 360 / totalSegments;
+
+            DOM.wheelColorLayer.innerHTML = '';
+            DOM.wheelLabelLayer.innerHTML = '';
+            
+            const gradientColors = [];
+
+            gifts.forEach((gift, i) => {
+                const startAngle = segmentAngle * i;
+                const endAngle = segmentAngle * (i + 1);
+                
+                // 1. Build the gradient string
+                const color = (i % 2 === 0) ? 'var(--color-yellow)' : 'var(--color-white)';
+                gradientColors.push(`${color} ${startAngle}deg ${endAngle}deg`);
+
+                // 2. Create the label container "stick"
+                const labelContainer = document.createElement('div');
+                labelContainer.className = 'wheel-label-container';
+                
+                // Point the "stick" to the DEAD CENTER of the slice
+                const segmentRotation = startAngle + (segmentAngle / 2);
+                labelContainer.style.transform = `rotate(${segmentRotation}deg)`;
+
+                // 3. Create the text label
+                const labelSpan = document.createElement('span');
+                labelSpan.className = 'wheel-label';
+                labelSpan.textContent = gift.label;
+
+                /* * --- THE SECOND HACK (FIXES TEXT) ---
+                 * This logic fixes the upside-down text
+                 */
+                const normalizedRotation = (segmentRotation % 360 + 360) % 360;
+                
+                // Default transform: move it out, stand it up
+                let textTransform = 'translateX(70px) rotate(180deg)';
+                
+                // Check if it's on the RIGHT side (0-90 or 270-360)
+                if (normalizedRotation < 90 || normalizedRotation > 270) {
+                    // It's on the right side, so it's upside down.
+                    // Add a 180 flip to the transform.
+                    textTransform += ' rotate(180deg)';
+                }
+                
+                labelSpan.style.transform = textTransform;
+                /* --- END HACK --- */
+                
+                labelContainer.appendChild(labelSpan);
+                DOM.wheelLabelLayer.appendChild(labelContainer);
+            });
+
+            // Apply the new background to the color layer
+            DOM.wheelColorLayer.style.background = `conic-gradient(from 0deg, ${gradientColors.join(', ')})`;
+        }
+
+        /**
+         * Shows a popup (welcome, win, lose)
+         */
+        function showPopup(type, data = {}) {
+            // This is the fix. ALWAYS hide the win info first.
+            DOM.winInfo.classList.add('hidden');
+            
+            if (type === 'welcome') {
+                DOM.popupTitle.textContent = 'Hi There!';
+                DOM.popupMessage.textContent = 'Tap the wheel to start spinning. Tap it again to stop the spin. Good luck!';
+                DOM.popupCloseBtn.textContent = 'Got It!';
+                DOM.popupCloseBtn.classList.remove('hidden'); // Show the 'Got It!' button
+                DOM.popupCloseBtn.onclick = hidePopup;
+            } 
+            else if (type === 'result') {
+                DOM.popupTitle.textContent = data.isWin ? 'SLAY!' : 'D\'oh!';
+                DOM.popupMessage.textContent = data.message;
+                // DOM.popupCloseBtn.textContent = 'Spin Again';
+                // DOM.popupCloseBtn.classList.remove('hidden'); // Show the 'Spin Again' button
+
+                if (data.isWin) {
+                    document.querySelector('#popup-close-btn').style.display = "none";
+                    document.querySelector('.confetti').style.display = "flex";
+                    DOM.winInfo.classList.remove('hidden'); // Show the win stuff
+                    DOM.winSubmitBtn.href = CONFIG.WIN_SUBMIT_URL;
+                }
+
+                DOM.popupCloseBtn.onclick = () => {
+                    hidePopup();
+                    resetWheel();
+                };
+            }
+
+            DOM.popupOverlay.classList.remove('hidden');
+        }
+
+        function hidePopup() {
+            DOM.popupOverlay.classList.add('hidden');
+        }
+
+        function handleSpinClick() {
+            if (STATE.isSpinning) {
+                stopSpin();
+            } else if (STATE.canSpin) {
+                startSpin();
+            }
+        }
+
+        function startSpin() {
+            if (!STATE.canSpin) return;
+            
+            STATE.isSpinning = true;
+            STATE.canSpin = false;
+            
+            DOM.centerButton.classList.add('pressed');
+            setTimeout(() => DOM.centerButton.classList.remove('pressed'), 100);
+
+            DOM.wheel.style.transition = 'none';
+            DOM.wheel.classList.add('spinning');
+
+            DOM.centerButton.querySelector('span').textContent = 'STOP';
+        }
+
+        function stopSpin() {
+            if (!STATE.isSpinning) return;
+
+            STATE.isSpinning = false;
+            
+            DOM.centerButton.classList.add('pressed');
+            setTimeout(() => DOM.centerButton.classList.remove('pressed'), 100);
+            
+            const computedStyle = window.getComputedStyle(DOM.wheel);
+            const matrix = new DOMMatrix(computedStyle.transform);
+            const currentRotation = Math.atan2(matrix.b, matrix.a) * (30 / Math.PI);
+            
+            const totalSegments = STATE.availableGifts.length;
+            const resultIndex = Math.floor(Math.random() * totalSegments);
+            const thePrize = STATE.availableGifts[resultIndex];
+            
+            const segmentAngle = 360 / totalSegments;
+            const targetAngle = (resultIndex * segmentAngle) + (segmentAngle / 2);
+            
+            const targetStopRotation = 360 - targetAngle + 270;
+            
+            const currentMod = (currentRotation % 360 + 360) % 360;
+            const spinAmount = (360 * CONFIG.MIN_SPINS) + targetStopRotation - currentMod;
+            const finalRotation = currentRotation + spinAmount;
+
+            DOM.wheel.classList.remove('spinning');
+            DOM.wheel.style.transition = `transform ${CONFIG.SPIN_DURATION_S}s ${getComputedStyle(document.documentElement).getPropertyValue('--spin-timing-function')}`;
+            DOM.wheel.style.transform = `rotate(${finalRotation}deg)`;
+
+            STATE.currentRotation = finalRotation;
+            
+            // This is the SYNCED timer.
+
+            setTimeout(() => {
+                showPopup('result', thePrize);
+            }, 1000); 
+        }
+
+        function resetWheel() {
+            DOM.wheel.style.transition = 'none';
+            const normalizedRotation = STATE.currentRotation % 360;
+            DOM.wheel.style.transform = `rotate(${normalizedRotation}deg)`;
+            STATE.currentRotation = normalizedRotation;
+            
+            STATE.canSpin = true;
+            DOM.centerButton.querySelector('span').textContent = 'SPIN';
+        }
+
+
+        /**
+         * Main function to fetch, build, and run the game
+         */
+        async function initializeGame() {
+            if (!checkTimeGate()) {
+                return; // Stop right here, brah
+            }
+
+            DOM.centerButton.addEventListener('click', handleSpinClick);
+            
+            console.log('Fetching data, mate...');
+            try {
+                const response = await fetch(dataUrl);
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                
+                const text = await response.text();
+                const jsonData = cleanGoogleJsonResponse(text);
+                
+                STATE.availableGifts = formatThatGvizShit(jsonData); 
+                
+                if (STATE.availableGifts.length === 0) {
+                    throw new Error("D'oh! The sheet is empty, brah.");
+                }
+
+                buildWheel(STATE.availableGifts);
+                showPopup('welcome');
+
+            } catch (error) {
+                console.error('Totally cooked it, brah:', error);
+                DOM.gameContainer.innerHTML = `<p style="color: red; padding: 2rem;"><b>Totally cooked it:</b> ${error.message}</p>`;
+            }
+        }
+
+        // Run the hack!
+        document.addEventListener('DOMContentLoaded', initializeGame);
+
+    </script>
+<div id="marking">Proudly created by DMD Faculty of Raffles Jakarta.<br>All rights reserved <a style="text-decoration:none; font-weight: bold; color: #333;"  href="https://www.raffles-indonesia.com/">Raffles Indonesia</a>.</div>
+</body>
+</html>
