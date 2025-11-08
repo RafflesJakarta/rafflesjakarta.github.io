@@ -162,10 +162,11 @@
         .wheel-label {
             display: block;
             /* JS will set the full transform from here */
-            left: -21px;
+            left: -5px;
             /* Text styling */
             font-weight: 700;
-            font-size: 1rem;
+            font-size: 1.1rem;
+            
             color: var(--color-black);
             
             /* Handle long text */
@@ -179,6 +180,30 @@
             position: relative;
         }
 
+        @media (max-width: 359px) {
+            .wheel-label {
+                left: -42px;
+                font-weight: 700;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (min-width: 360px) and (max-width: 390px) {
+            .wheel-label {
+                left: -34px;
+                font-weight: 700;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (min-width:391px) and (max-width: 500px) {
+            .wheel-label {
+                left: -21px;
+                /* Text styling */
+                font-weight: 700;
+                font-size: 1rem;
+            }
+        }
         /* The center button */
         #wheel-center-button {
             width: 80px;
