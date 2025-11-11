@@ -713,7 +713,7 @@
             MIN_SPINS: 10,
             
             // --- THE CLIENT'S HACK ---
-            WIN_PROBABILITY: 1 / 20
+            WIN_PROBABILITY: 1 / 50
         };
         // --- END CONFIG ---
         // --- END CONFIG ---
@@ -863,7 +863,7 @@
                 DOM.popupMessage.textContent = 'Tap the wheel to start spinning. Tap it again to stop the spin. Good luck!';
                 DOM.popupCloseBtn.textContent = 'Got It!';
                 DOM.popupCloseBtn.classList.remove('hidden'); // Show the 'Got It!' button
-                DOM.popupCloseBtn.onclick = hidePopup;
+                DOM.popupCloseBtn.onclick = location.reload();
             } 
             else if (type === 'result') {
                 DOM.popupTitle.textContent = data.isWin ? 'SLAY!' : 'D\'oh!';
