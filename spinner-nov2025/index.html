@@ -863,7 +863,7 @@
                 DOM.popupMessage.textContent = 'Tap the wheel to start spinning. Tap it again to stop the spin. Good luck!';
                 DOM.popupCloseBtn.textContent = 'Got It!';
                 DOM.popupCloseBtn.classList.remove('hidden'); // Show the 'Got It!' button
-                DOM.popupCloseBtn.onclick = location.reload();
+                DOM.popupCloseBtn.onclick = hidePopup;
             } 
             else if (type === 'result') {
                 DOM.popupTitle.textContent = data.isWin ? 'SLAY!' : 'D\'oh!';
