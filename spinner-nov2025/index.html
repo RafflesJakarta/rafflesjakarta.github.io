@@ -868,7 +868,7 @@
             else if (type === 'result') {
                 DOM.popupTitle.textContent = data.isWin ? 'SLAY!' : 'D\'oh!';
                 DOM.popupMessage.textContent = data.message;
-                // DOM.popupCloseBtn.textContent = 'Spin Again';
+                DOM.popupCloseBtn.textContent = 'Restart';
                 // DOM.popupCloseBtn.classList.remove('hidden'); // Show the 'Spin Again' button
 
                 if (data.isWin) {
@@ -880,7 +880,7 @@
 
                 DOM.popupCloseBtn.onclick = () => {
                     hidePopup();
-                  location.reload();
+                    location.reload();
                     resetWheel();
                 };
             }
