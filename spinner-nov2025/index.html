@@ -880,6 +880,7 @@
 
                 DOM.popupCloseBtn.onclick = () => {
                     hidePopup();
+                  location.reload();
                     resetWheel();
                 };
             }
@@ -889,7 +890,7 @@
 
         function hidePopup() {
             DOM.popupOverlay.classList.add('hidden');
-          location.reload();
+          // location.reload();
         }
 
         function handleSpinClick() {
