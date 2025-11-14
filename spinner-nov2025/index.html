@@ -713,7 +713,7 @@
             MIN_SPINS: 10,
             
             // --- THE CLIENT'S HACK ---
-            WIN_PROBABILITY: 1 / 20
+            WIN_PROBABILITY: 1 / 8
         };
         // --- END CONFIG ---
         // --- END CONFIG ---
@@ -966,26 +966,17 @@
             const currentRotation = Math.atan2(matrix.b, matrix.a) * (30 / Math.PI);
             
             // --- THIS IS THE NEW HACK, MATE ---
-
-            // 1. Roll the dice. Is this a winning spin? (e.g., 16.6% chance)
+            
             const isGonnaBeAWin = Math.random() < CONFIG.WIN_PROBABILITY;
-
-            // 2. Sort all your prizes into two piles: 'rad' and 'bogus'
             const winPrizes = STATE.availableGifts.filter(p => p.isWin);
             const losePrizes = STATE.availableGifts.filter(p => p.isWin === false);
-
-            // 3. Decide which pile we're picking from
             let potentialPrizes = [];
             
             if (isGonnaBeAWin && winPrizes.length > 0) {
-                // Stoked! It's a win. Pick from the 'rad' pile.
                 potentialPrizes = winPrizes;
             } else if (!isGonnaBeAWin && losePrizes.length > 0) {
-                // D'oh! It's a loss. Pick from the 'bogus' pile.
                 potentialPrizes = losePrizes;
             } else {
-                // Fallback: If the sheet is cooked (e.g., all wins, no losses)
-                // just pick from whatever is left. Can't crash, brah.
                 potentialPrizes = STATE.availableGifts;
             }
             
